@@ -3,6 +3,8 @@ package vm
 import (
 	"math/big"
 
+	"github.com/arcology-network/common-lib/codec"
+	commontypes "github.com/arcology-network/common-lib/common"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -13,21 +15,23 @@ type ArcologyAPIRouterInterface interface {
 
 type ArcologyNetwork struct {
 	evm            *EVM
-	context        *ScopeContext
-	concurrentAPIs ArcologyAPIRouterInterface // Arcology API entrance
+	callerContract ContractRef
+	CallContext    *ScopeContext              // only available at run time
+	APIs           ArcologyAPIRouterInterface // Arcology API entrance
 }
 
 func NewArcologyNetwork(evm *EVM) *ArcologyNetwork {
 	return &ArcologyNetwork{
-		evm:     evm,
-		context: nil, // only available at run time
+		evm: evm,
+		// context: nil, // only available at run time
 	}
 }
 
 // Redirect to Arcology API intead
-func (this ArcologyNetwork) Redirect(caller ContractRef, addr common.Address, input []byte, gas uint64) (called bool, ret []byte, leftOverGas uint64, err error) {
-	if called, ret, ok := this.concurrentAPIs.Call(
-		caller.Address(),
+func (this ArcologyNetwork) Call(callerContract ContractRef, addr common.Address, input []byte, gas uint64) (called bool, ret []byte, leftOverGas uint64, err error) {
+	this.callerContract = callerContract
+	if called, ret, ok := this.APIs.Call(
+		this.callerContract.Address(),
 		addr,
 		input,
 		this.evm.Origin,
@@ -42,8 +46,36 @@ func (this ArcologyNetwork) Redirect(caller ContractRef, addr common.Address, in
 	return false, ret, gas, nil
 }
 
-func (this *ArcologyNetwork) CopyContext(context interface{})             { this.context = context.(*ScopeContext) }
-func (this *ArcologyNetwork) Depth() int                                  { return this.evm.depth }
-func (this *ArcologyNetwork) CallGasTemp() uint64                         { return this.evm.callGasTemp }
-func (this *ArcologyNetwork) GetTxContext() TxContext                     { return this.evm.TxContext }
-func (this *ArcologyNetwork) SetApiRouter(api ArcologyAPIRouterInterface) { this.concurrentAPIs = api }
+func (this *ArcologyNetwork) GetCallData() []byte {
+	if this.CallContext.Contract != nil {
+		return (this.CallContext.Contract.Input)
+	}
+	return []byte{}
+}
+
+func (this *ArcologyNetwork) CopyContext(context interface{}) {
+	this.CallContext = context.(*ScopeContext)
+}
+
+func (this *ArcologyNetwork) Depth() int { return this.evm.depth }
+
+func (this *ArcologyNetwork) CallHierarchy() [][]byte {
+	buffers := [][]byte{
+		this.CallContext.Contract.Input[:4],
+		codec.Bytes20(this.CallContext.Contract.Address()).Encode(),
+	}
+
+	if commontypes.IsType[*Contract](this.CallContext.Contract.caller) { // Not a contract
+		caller := this.CallContext.Contract.caller
+		for {
+			if !commontypes.IsType[*Contract](caller) { // Not a contract
+				break
+			}
+			buffers = append(buffers, caller.(*Contract).Input[:4])
+			buffers = append(buffers, codec.Bytes20(caller.Address()).Encode())
+
+			caller = caller.(*Contract).caller
+		}
+	}
+	return buffers
+}

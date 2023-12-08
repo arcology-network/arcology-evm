@@ -198,7 +198,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	// Redirect the call to Arcology APIs
-	if invoked, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Redirect(caller, addr, input, gas); invoked {
+	if invoked, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Call(caller, addr, input, gas); invoked {
 		return ret, leftOverGas, err
 	}
 
@@ -376,8 +376,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
-	// Redirect to Arcology wrapped EVM.
-	if called, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Redirect(caller, addr, input, gas); called {
+	// Redirect the call to Arcology APIs
+	if invoked, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Call(caller, addr, input, gas); invoked {
 		return ret, leftOverGas, err
 	}
 	// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
