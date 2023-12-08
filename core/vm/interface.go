@@ -32,7 +32,7 @@ type StateDB interface {
 	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
 
-	GetBalanceNoRecord(common.Address) *big.Int //modify for monaco
+	PeekBalance(common.Address) *big.Int
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)

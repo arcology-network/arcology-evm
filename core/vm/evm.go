@@ -26,8 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-
-	"github.com/ethereum/go-ethereum/monaco"
+	// "github.com/ethereum/go-ethereum/monaco"
 )
 
 type (
@@ -127,7 +126,8 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 
-	kapi monaco.KernelAPI
+	//for Arcology
+	ArcologyNetworkAPIs *ArcologyNetwork
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -153,18 +153,11 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		chainRules:  chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil, blockCtx.Time),
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
-	return evm
-}
 
-// NewEVMEx used only in Monaco.
-func NewEVMEx(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config, kapi monaco.KernelAPI) *EVM {
-	evm := NewEVM(blockCtx, txCtx, statedb, chainConfig, vmConfig)
-	evm.kapi = kapi
-	return evm
-}
+	//for Arcology
+	evm.ArcologyNetworkAPIs = NewArcologyNetwork(evm)
 
-func (evm *EVM) SetApi(kapi monaco.KernelAPI) {
-	evm.kapi = kapi
+	return evm
 }
 
 // Reset resets the EVM with a new transaction context.Reset
@@ -204,13 +197,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	// Added by Monaco.
-	if evm.kapi != nil && evm.kapi.IsKernelAPI(addr) {
-		ret, ok := evm.kapi.Call(caller.Address(), addr, input, evm.Origin, evm.StateDB.GetNonce(evm.Origin), evm.Context.GetHash(new(big.Int).Sub(evm.Context.BlockNumber, big1).Uint64()))
-		if !ok {
-			return ret, gas, ErrExecutionReverted
-		}
-		return ret, gas, nil
+	// Redirect the call to Arcology APIs
+	if invoked, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Redirect(caller, addr, input, gas); invoked {
+		return ret, leftOverGas, err
 	}
 
 	snapshot := evm.StateDB.Snapshot()
@@ -387,13 +376,9 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
-	// Added by Monaco.
-	if evm.kapi != nil && evm.kapi.IsKernelAPI(addr) {
-		ret, ok := evm.kapi.Call(caller.Address(), addr, input, evm.Origin, evm.StateDB.GetNonce(evm.Origin), evm.Context.GetHash(new(big.Int).Sub(evm.Context.BlockNumber, big1).Uint64()))
-		if !ok {
-			return ret, gas, ErrExecutionReverted
-		}
-		return ret, gas, nil
+	// Redirect to Arcology wrapped EVM.
+	if called, ret, leftOverGas, err := evm.ArcologyNetworkAPIs.Redirect(caller, addr, input, gas); called {
+		return ret, leftOverGas, err
 	}
 	// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
 	// However, even a staticcall is considered a 'touch'. On mainnet, static calls were introduced

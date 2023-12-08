@@ -289,7 +289,7 @@ func (s *StateDB) GetBalance(addr common.Address) *big.Int {
 }
 
 // used only in Monaco.
-func (s *StateDB) GetBalanceNoRecord(addr common.Address) *big.Int {
+func (s *StateDB) PeekBalance(addr common.Address) *big.Int {
 	return s.GetBalance(addr)
 }
 

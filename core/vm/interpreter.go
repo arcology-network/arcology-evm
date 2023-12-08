@@ -154,6 +154,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	}()
 	contract.Input = input
 
+	in.evm.ArcologyNetworkAPIs.CopyContext(callContext) // For Arcology
+
 	if debug {
 		defer func() {
 			if err != nil {
