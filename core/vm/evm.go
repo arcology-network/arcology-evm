@@ -26,6 +26,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/ethereum/go-ethereum/monaco"
 )
 
 type (
@@ -124,6 +126,8 @@ type EVM struct {
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
 	callGasTemp uint64
+
+	kapi monaco.KernelAPI
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -150,6 +154,17 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
 	return evm
+}
+
+// NewEVMEx used only in Monaco.
+func NewEVMEx(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config, kapi monaco.KernelAPI) *EVM {
+	evm := NewEVM(blockCtx, txCtx, statedb, chainConfig, vmConfig)
+	evm.kapi = kapi
+	return evm
+}
+
+func (evm *EVM) SetApi(kapi monaco.KernelAPI) {
+	evm.kapi = kapi
 }
 
 // Reset resets the EVM with a new transaction context.Reset
@@ -188,6 +203,16 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if value.Sign() != 0 && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance
 	}
+
+	// Added by Monaco.
+	if evm.kapi != nil && evm.kapi.IsKernelAPI(addr) {
+		ret, ok := evm.kapi.Call(caller.Address(), addr, input, evm.Origin, evm.StateDB.GetNonce(evm.Origin), evm.Context.GetHash(new(big.Int).Sub(evm.Context.BlockNumber, big1).Uint64()))
+		if !ok {
+			return ret, gas, ErrExecutionReverted
+		}
+		return ret, gas, nil
+	}
+
 	snapshot := evm.StateDB.Snapshot()
 	p, isPrecompile := evm.precompile(addr)
 	debug := evm.Config.Tracer != nil
@@ -362,6 +387,14 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
+	// Added by Monaco.
+	if evm.kapi != nil && evm.kapi.IsKernelAPI(addr) {
+		ret, ok := evm.kapi.Call(caller.Address(), addr, input, evm.Origin, evm.StateDB.GetNonce(evm.Origin), evm.Context.GetHash(new(big.Int).Sub(evm.Context.BlockNumber, big1).Uint64()))
+		if !ok {
+			return ret, gas, ErrExecutionReverted
+		}
+		return ret, gas, nil
+	}
 	// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
 	// However, even a staticcall is considered a 'touch'. On mainnet, static calls were introduced
 	// after all empty accounts were deleted, so this is not required. However, if we omit this,
@@ -431,11 +464,11 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
-	nonce := evm.StateDB.GetNonce(caller.Address())
-	if nonce+1 < nonce {
-		return nil, common.Address{}, gas, ErrNonceUintOverflow
-	}
-	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	// nonce := evm.StateDB.GetNonce(caller.Address())
+	// if nonce+1 < nonce {
+	// 	return nil, common.Address{}, gas, ErrNonceUintOverflow
+	// }
+	// evm.StateDB.SetNonce(caller.Address(), nonce+1)
 	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
 	// the access-list change should not be rolled back
 	if evm.chainRules.IsBerlin {
