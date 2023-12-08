@@ -18,6 +18,7 @@ package trie
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/trie/trienode"
 )
 
 // tracer tracks the changes of trie nodes. During the trie operations,
@@ -91,7 +92,7 @@ func (t *tracer) reset() {
 }
 
 // copy returns a deep copied tracer instance.
-func (t *tracer) copy() *tracer {
+func (t *tracer) copy() tracerInterface {
 	var (
 		inserts    = make(map[string]struct{})
 		deletes    = make(map[string]struct{})
@@ -127,4 +128,23 @@ func (t *tracer) deletedNodes() []string {
 		paths = append(paths, path)
 	}
 	return paths
+}
+
+func (t *tracer) getAccessList() map[string][]byte { return map[string][]byte{} }
+func (t *tracer) getDeletes() map[string]struct{}  { return t.deletes }
+func (t *tracer) getInserts() map[string]struct{}  { return t.inserts }
+
+// markDeletions puts all tracked deletions into the provided nodeset.
+
+func (t *tracer) markDeletions(set *trienode.NodeSet) {
+	// for path := range t.deletes {
+	// It's possible a few deleted nodes were embedded
+	// in their parent before, the deletions can be no
+	// effect by deleting nothing, filter them out.
+	// prev, ok := t.accessList[path]
+	// if !ok {
+	// 	continue
+	// }
+	// set.AddNode([]byte(path), trienode.NewWithPrev(common.Hash{}, nil, prev))
+	// }
 }

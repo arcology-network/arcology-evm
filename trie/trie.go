@@ -53,7 +53,7 @@ type Trie struct {
 
 	// tracer is the tool to track the trie changes.
 	// It will be reset after each commit operation.
-	tracer *tracer
+	tracer tracerInterface
 }
 
 // newFlag returns the cache flag value for a newly created node.

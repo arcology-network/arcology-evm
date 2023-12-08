@@ -38,3 +38,12 @@ func newTestDatabase(diskdb ethdb.Database, scheme string) *Database {
 	}
 	return NewDatabase(diskdb, config)
 }
+
+// new16TestMemDBs initializes 16 memory databases for concurrent operations.
+func new16TestMemDBs() [16]ethdb.Database {
+	dbs := [16]ethdb.Database{}
+	for i := 0; i < len(dbs); i++ {
+		dbs[i] = rawdb.NewMemoryDatabase()
+	}
+	return dbs
+}
