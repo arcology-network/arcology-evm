@@ -10,7 +10,7 @@ import (
 
 // KernelAPI provides system level function calls supported by arcology platform.
 type ArcologyAPIRouterInterface interface {
-	Call(caller, callee common.Address, input []byte, origin common.Address, nonce uint64, blockhash common.Hash) (bool, []byte, bool)
+	Call(caller, callee [20]byte, input []byte, origin [20]byte, nonce uint64, blockhash common.Hash) (bool, []byte, bool, int64)
 }
 
 type ArcologyNetwork struct {
@@ -30,7 +30,7 @@ func NewArcologyNetwork(evm *EVM) *ArcologyNetwork {
 // Redirect to Arcology API intead
 func (this ArcologyNetwork) Call(callerContract ContractRef, addr common.Address, input []byte, gas uint64) (called bool, ret []byte, leftOverGas uint64, err error) {
 	this.callerContract = callerContract
-	if called, ret, ok := this.APIs.Call(
+	if called, ret, ok, gasUsed := this.APIs.Call(
 		this.callerContract.Address(),
 		addr,
 		input,
@@ -38,10 +38,16 @@ func (this ArcologyNetwork) Call(callerContract ContractRef, addr common.Address
 		this.evm.StateDB.GetNonce(this.evm.Origin),
 		this.evm.Context.GetHash(new(big.Int).Sub(this.evm.Context.BlockNumber, big1).Uint64()),
 	); called {
-		if !ok {
-			return true, ret, gas, ErrExecutionReverted
+		if gasUsed < 0 {
+			leftOverGas = gas + uint64(gasUsed*-1)
+		} else {
+			leftOverGas = gas - uint64(gasUsed)
 		}
-		return true, ret, gas, nil
+
+		if !ok {
+			return true, ret, leftOverGas, ErrExecutionReverted
+		}
+		return true, ret, leftOverGas, nil
 	}
 	return false, ret, gas, nil
 }
