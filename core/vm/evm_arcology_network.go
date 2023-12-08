@@ -3,10 +3,16 @@ package vm
 import (
 	"math/big"
 
-	"github.com/arcology-network/common-lib/codec"
-	commonlibcommon "github.com/arcology-network/common-lib/common"
 	"github.com/ethereum/go-ethereum/common"
 )
+
+func IsType[T any](v interface{}) bool {
+	switch v.(type) {
+	case T:
+		return true
+	}
+	return false
+}
 
 // KernelAPI provides system level function calls supported by arcology platform.
 type ArcologyAPIRouterInterface interface {
@@ -64,19 +70,21 @@ func (this *ArcologyNetwork) CopyContext(context interface{}) {
 func (this *ArcologyNetwork) Depth() int { return this.evm.depth }
 
 func (this *ArcologyNetwork) CallHierarchy() [][]byte {
+	addr := this.CallContext.Contract.Address()
+
 	buffers := [][]byte{
 		this.CallContext.Contract.Input[:4],
-		codec.Bytes20(this.CallContext.Contract.Address()).Encode(),
+		addr[:],
 	}
 
-	if commonlibcommon.IsType[*Contract](this.CallContext.Contract.caller) { // Not a contract
+	if IsType[*Contract](this.CallContext.Contract.caller) { // Not a contract
 		caller := this.CallContext.Contract.caller
+		callerAddr := caller.Address()
 		for {
-			if !commonlibcommon.IsType[*Contract](caller) { // Not a contract
+			if !IsType[*Contract](caller) { // Not a contract
 				break
 			}
-			buffers = append(buffers, caller.(*Contract).Input[:4])
-			buffers = append(buffers, codec.Bytes20(caller.Address()).Encode())
+			buffers = append(append(buffers, caller.(*Contract).Input[:4]), callerAddr[:])
 
 			caller = caller.(*Contract).caller
 		}
@@ -85,5 +93,5 @@ func (this *ArcologyNetwork) CallHierarchy() [][]byte {
 }
 
 func (this *ArcologyNetwork) IsInConstructor() bool {
-	return this.CallContext.Contract.CodeHash == common.Hash{} //&& commonlibcommon.IsType[*Contract](this.CallContext.Contract.caller)
+	return this.CallContext.Contract.CodeHash == common.Hash{}
 }
