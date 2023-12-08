@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/arcology-network/common-lib/codec"
-	commontypes "github.com/arcology-network/common-lib/common"
+	commonlibcommon "github.com/arcology-network/common-lib/common"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -14,10 +14,9 @@ type ArcologyAPIRouterInterface interface {
 }
 
 type ArcologyNetwork struct {
-	evm            *EVM
-	callerContract ContractRef
-	CallContext    *ScopeContext              // only available at run time
-	APIs           ArcologyAPIRouterInterface // Arcology API entrance
+	evm         *EVM
+	CallContext *ScopeContext              // only available at run time
+	APIs        ArcologyAPIRouterInterface // Arcology API entrance
 }
 
 func NewArcologyNetwork(evm *EVM) *ArcologyNetwork {
@@ -29,9 +28,8 @@ func NewArcologyNetwork(evm *EVM) *ArcologyNetwork {
 
 // Redirect to Arcology API intead
 func (this ArcologyNetwork) Call(callerContract ContractRef, addr common.Address, input []byte, gas uint64) (called bool, ret []byte, leftOverGas uint64, err error) {
-	this.callerContract = callerContract
 	if called, ret, ok, gasUsed := this.APIs.Call(
-		this.callerContract.Address(),
+		callerContract.Address(),
 		addr,
 		input,
 		this.evm.Origin,
@@ -71,10 +69,10 @@ func (this *ArcologyNetwork) CallHierarchy() [][]byte {
 		codec.Bytes20(this.CallContext.Contract.Address()).Encode(),
 	}
 
-	if commontypes.IsType[*Contract](this.CallContext.Contract.caller) { // Not a contract
+	if commonlibcommon.IsType[*Contract](this.CallContext.Contract.caller) { // Not a contract
 		caller := this.CallContext.Contract.caller
 		for {
-			if !commontypes.IsType[*Contract](caller) { // Not a contract
+			if !commonlibcommon.IsType[*Contract](caller) { // Not a contract
 				break
 			}
 			buffers = append(buffers, caller.(*Contract).Input[:4])
@@ -84,4 +82,8 @@ func (this *ArcologyNetwork) CallHierarchy() [][]byte {
 		}
 	}
 	return buffers
+}
+
+func (this *ArcologyNetwork) IsInConstructor() bool {
+	return this.CallContext.Contract.CodeHash == common.Hash{} //&& commonlibcommon.IsType[*Contract](this.CallContext.Contract.caller)
 }
