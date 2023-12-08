@@ -288,6 +288,11 @@ func (s *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
+// used only in Monaco.
+func (s *StateDB) GetBalanceNoRecord(addr common.Address) *big.Int {
+	return s.GetBalance(addr)
+}
+
 // GetNonce retrieves the nonce from the given address or 0 if object not found
 func (s *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := s.getStateObject(addr)
