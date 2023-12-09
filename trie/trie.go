@@ -84,11 +84,13 @@ func New(id *ID, db *Database) (*Trie, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	trie := &Trie{
 		owner:  id.Owner,
 		reader: reader,
 		tracer: newTracer(),
 	}
+
 	if id.Root != (common.Hash{}) && id.Root != types.EmptyRootHash {
 		rootnode, err := trie.resolveAndTrack(id.Root[:], nil)
 		if err != nil {
@@ -96,6 +98,7 @@ func New(id *ID, db *Database) (*Trie, error) {
 		}
 		trie.root = rootnode
 	}
+
 	return trie, nil
 }
 
@@ -373,7 +376,20 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		if !dirty || err != nil {
 			return false, n, err
 		}
-		n = n.copy()
+
+		/*
+			The code below creates a fresh copy from a "clean" node ONCE. All the subsequent operations will be performed on that
+			single copy until the next root hash calculation. This cut the overall time by half.
+
+			This comes with the cost of losing ability to roll back to any state snapshot between two root hash
+			calcuations. This doesn't affect Arcology since it has other methods to keep track of state changes.
+		*/
+
+		if !n.flags.dirty {
+			n = n.copy()
+		}
+
+		// n = n.copy()
 		n.flags = t.newFlag()
 		n.Children[key[0]] = nn
 		return true, n, nil
@@ -382,6 +398,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		// New short node is created and track it in the tracer. The node identifier
 		// passed is the path from the root node. Note the valueNode won't be tracked
 		// since it's always embedded in its parent.
+
 		t.tracer.onInsert(prefix)
 
 		return true, &shortNode{key, value, t.newFlag()}, nil
@@ -612,6 +629,7 @@ func (t *Trie) Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet, error) 
 	defer func() {
 		t.committed = true
 	}()
+
 	// Trie is empty and can be classified into two types of situations:
 	// (a) The trie was empty and no update happens => return nil
 	// (b) The trie was non-empty and all nodes are dropped => return

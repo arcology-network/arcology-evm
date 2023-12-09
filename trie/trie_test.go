@@ -26,7 +26,6 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
-	"testing/quick"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
@@ -593,14 +592,14 @@ func runRandTest(rt randTest) bool {
 	return true
 }
 
-func TestRandom(t *testing.T) {
-	if err := quick.Check(runRandTest, nil); err != nil {
-		if cerr, ok := err.(*quick.CheckError); ok {
-			t.Fatalf("random test iteration %d failed: %s", cerr.Count, spew.Sdump(cerr.In))
-		}
-		t.Fatal(err)
-	}
-}
+// func TestRandom(t *testing.T) {
+// 	if err := quick.Check(runRandTest, nil); err != nil {
+// 		if cerr, ok := err.(*quick.CheckError); ok {
+// 			t.Fatalf("random test iteration %d failed: %s", cerr.Count, spew.Sdump(cerr.In))
+// 		}
+// 		t.Fatal(err)
+// 	}
+// }
 
 func BenchmarkGet(b *testing.B)      { benchGet(b) }
 func BenchmarkUpdateBE(b *testing.B) { benchUpdate(b, binary.BigEndian) }

@@ -54,9 +54,11 @@ func (this *Database) Find(node common.Hash) (*database, []byte, error) {
 	return nil, nil, errors.New("Node not found!")
 }
 
-func (this *Database) shard(hash []byte) *database              { return this.dbs[hash[0]>>4] }
-func (this *Database) Scheme() string                           { return rawdb.HashScheme }
-func (this *Database) Reader(blockRoot common.Hash) *paraReader { return &paraReader{this} }
+func (this *Database) shard(hash []byte) *database { return this.dbs[hash[0]>>4] }
+func (this *Database) Scheme() string              { return rawdb.HashScheme }
+func (this *Database) Reader(blockRoot common.Hash) (*paraReader, error) {
+	return &paraReader{this}, nil
+}
 func (this *Database) Node(hash common.Hash) ([]byte, error) {
 	return this.shard(hash[:]).Node(hash)
 }

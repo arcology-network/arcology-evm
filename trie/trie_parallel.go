@@ -14,7 +14,11 @@ func NewParallel(id *ID, db *Database) (*Trie, error) {
 		return nil, fmt.Errorf("state not found #%x", id.StateRoot)
 	}
 
-	trie, _ := New(id, db)
+	trie, err := New(id, db)
+	if err != nil {
+		return nil, err
+	}
+
 	trie.tracer = newParaTracer()
 	trie.reader = paraReader
 	return trie, nil
@@ -165,14 +169,14 @@ func (trie *Trie) ParallelGet(keys [][]byte) ([][]byte, error) {
 	if len(keys) == 0 {
 		return values, nil
 	}
+
 	accesseCache := NewAccessListCaches(16)
-	// ParallelWorker(16, 16, func(start, end, index int, args ...interface{}) {
-	// for start := 0; start < 16; start++ {
-	for j := 0; j < len(keys); j++ {
-		if nibble := (keys[j][0] >> 4); int(nibble) == j {
-			values[j], _, _, _ = trie.threadSafeGet(trie.root, keybytesToHex(keys[j]), 0, accesseCache[nibble])
+	ParallelWorker(16, 16, func(start, end, index int, args ...interface{}) {
+		for j := 0; j < len(keys); j++ {
+			if nibble := (keys[j][0] >> 4); int(nibble) == start {
+				values[j], _, _, _ = trie.threadSafeGet(trie.root, keybytesToHex(keys[j]), 0, accesseCache[nibble])
+			}
 		}
-	}
-	// })
+	})
 	return values, nil
 }

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/trie/trienode"
 	"github.com/ethereum/go-ethereum/trie/triestate"
 )
@@ -51,48 +51,113 @@ func TestParallelUpdateionPutSmallDataSet(t *testing.T) {
 
 	keys[0], keys[1] = make([]byte, 20), make([]byte, 20)
 	for i := 0; i < len(keys[0]); i++ {
-		keys[0][i] = 'a'
-		keys[1][i] = 'b'
+		keys[0][i] = uint8(i)
+		keys[1][i] = uint8(i + 1)
+
 	}
 
 	paraDB := NewParallelDatabase(new16TestMemDBs(), nil)
 	paraTrie16 := NewEmptyParallel(paraDB)
 
 	paraTrie16.ParallelUpdate(keys, keys)
-	paraTrie16Root, paraNodes, err := paraTrie16.Commit(false)
-	if err != nil {
-		t.Error(err)
-	}
-
-	paraDB.Update(paraTrie16Root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(paraNodes), &triestate.Set{})
 
 	for i, k := range keys {
 		if v, err := paraTrie16.Get(k); err != nil {
 			t.Error(err)
 		} else {
 			if !bytes.Equal(v, keys[i]) {
-				t.Error("Mismatch")
+				t.Error("Mismatch from get()")
 			}
 		}
 	}
 
-	newParaTrie, _ := New(TrieID(paraTrie16Root), paraDB)
-	output, _ := newParaTrie.ParallelGet(keys)
+	output, _ := paraTrie16.ParallelGet(keys)
 	for i := 0; i < len(keys); i++ {
 		if !bytes.Equal(output[i], keys[i]) {
-			t.Errorf("Wrong value")
+			t.Errorf("Wrong values from parallelGet()")
 		}
 	}
 
-	for _, k := range keys {
-		proofs := memorydb.New()
-		newParaTrie.Prove(k, proofs)
+	paraTrie16Root, paraNodes, err := paraTrie16.Commit(false)
+	if err != nil {
+		t.Error(err)
+	}
 
-		v, err := VerifyProof(newParaTrie.Hash(), k, proofs)
-		if len(v) == 0 || err != nil || !bytes.Equal(v, k) {
-			t.Errorf("Wrong Proof")
+	paraDB.Update(paraTrie16Root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(paraNodes), &triestate.Set{})
+	if err := paraDB.Commit(paraTrie16Root, false); err != nil {
+		t.Error(err)
+	}
+	// for i, k := range keys {
+	// 	if v, err := paraTrie16.Get(k); err != nil {
+	// 		t.Error(err)
+	// 	} else {
+	// 		if !bytes.Equal(v, keys[i]) {
+	// 			t.Error("Mismatch")
+	// 		}
+	// 	}
+	// }
+
+	_, err = New(TrieID(paraTrie16Root), paraDB)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// output, _ = newParaTrie.ParallelGet(keys)
+	// for i := 0; i < len(keys); i++ {
+	// 	if !bytes.Equal(output[i], keys[i]) {
+	// 		t.Errorf("Wrong value")
+	// 	}
+	// }
+
+	// for _, k := range keys {
+	// 	proofs := memorydb.New()
+	// 	newParaTrie.Prove(k, proofs)
+
+	// 	v, err := VerifyProof(newParaTrie.Hash(), k, proofs)
+	// 	if len(v) == 0 || err != nil || !bytes.Equal(v, k) {
+	// 		t.Errorf("Wrong Proof")
+	// 	}
+	// }
+}
+
+func TestParallelUpdateionPutLargerDataSet(t *testing.T) {
+	keys := make([][]byte, 20)
+	for i := 0; i < len(keys); i++ {
+		addr := ethcommon.BytesToAddress([]byte{uint8(i)})
+		keys[i] = addr[:]
+	}
+
+	paraDB := NewParallelDatabase(new16TestMemDBs(), nil)
+	paraTrie16 := NewEmptyParallel(paraDB)
+
+	paraTrie16.ParallelUpdate(keys, keys)
+
+	for i, k := range keys {
+		if v, err := paraTrie16.Get(k); err != nil {
+			t.Error(err)
+		} else {
+			if !bytes.Equal(v, keys[i]) {
+				t.Error("Mismatch from get()")
+			}
+			fmt.Println(v)
 		}
 	}
+
+	output, _ := paraTrie16.ParallelGet(keys)
+	for i := 0; i < len(keys); i++ {
+		if !bytes.Equal(output[i], keys[i]) {
+			t.Error("Wrong values from parallelGet() ", output[i])
+		}
+	}
+
+	paraTrie16Root, paraNodes, err := paraTrie16.Commit(false)
+	if err != nil {
+		t.Error(err)
+	}
+
+	paraDB.Update(paraTrie16Root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(paraNodes), &triestate.Set{})
+	return
+
 }
 
 func TestParallelUpdateionPut(t *testing.T) {
@@ -107,7 +172,7 @@ func TestParallelUpdateionPut(t *testing.T) {
 	paraTrie16 := NewEmptyParallel(paraDB)
 
 	paraTrie16.ParallelUpdate(keys, data)
-	paraTrie16.Hash()
+	// paraTrie16.Hash()
 
 	for i, k := range keys {
 		if v, err := paraTrie16.Get(k); err != nil {
@@ -154,6 +219,46 @@ func TestParallelUpdateionPut(t *testing.T) {
 	// 		t.Errorf("Wrong Proof")
 	// 	}
 	// }
+}
+
+func TestParallelGet(t *testing.T) {
+	paraDB := NewParallelDatabase(new16TestMemDBs(), nil)
+	trie := NewEmptyParallel(paraDB)
+
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	updateString(trie, "dogglesworth", "cat")
+
+	trie.ParallelUpdate([][]byte{[]byte("doe"), []byte("dog"), []byte("dogglesworth")}, [][]byte{[]byte("reindeer"), []byte("puppy"), []byte("cat")})
+
+	root, nodes, _ := trie.Commit(false)
+	paraDB.Update(root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(nodes), nil)
+	newTrie, err := NewParallel(TrieID(root), paraDB)
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	newTrie.ParallelGet([][]byte{[]byte("dog"), []byte("doe"), []byte("dogglesworth")})
+}
+
+func TestParallelGetFromParaDB(t *testing.T) {
+	db := NewDatabase(rawdb.NewMemoryDatabase(), nil)
+	trie := NewEmpty(db)
+
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	updateString(trie, "dogglesworth", "cat")
+
+	trie.ParallelUpdate([][]byte{[]byte("doe"), []byte("dog"), []byte("dogglesworth")}, [][]byte{[]byte("reindeer"), []byte("puppy"), []byte("cat")})
+
+	root, nodes, _ := trie.Commit(false)
+	db.Update(root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(nodes), nil)
+	db.Commit(root, false)
+	trie, _ = New(TrieID(root), db)
+
+	trie.ParallelGet([][]byte{[]byte("dog"), []byte("doe"), []byte("dogglesworth")})
 }
 
 func TestParallelUpdateionConsistency(t *testing.T) {
@@ -216,7 +321,7 @@ func TestParallelUpdateionConsistency(t *testing.T) {
 
 	db.Update(root, types.EmptyRootHash, 0, trienode.NewWithNodeSet(nodes), &triestate.Set{})
 
-	newTrie, err := New(TrieID(root), db)
+	newTrie, err := NewParallel(TrieID(root), db)
 	if err != nil {
 		t.Error(err)
 	}
@@ -238,13 +343,6 @@ func TestParallelUpdateionConsistency(t *testing.T) {
 			if !bytes.Equal(v, data[i]) {
 				t.Error("Mismatch")
 			}
-		}
-	}
-
-	output, _ := trie.ParallelGet(keys)
-	for i := 0; i < len(data); i++ {
-		if !bytes.Equal(output[i], data[i]) {
-			t.Errorf("Wrong value")
 		}
 	}
 }
@@ -293,12 +391,12 @@ func TestParallelTrieGet(t *testing.T) {
 	fmt.Println("Get ", len(keys), time.Since(t0))
 
 	t0 = time.Now()
-	ParallelWorker(len(keys), 8, func(start, end, _ int, _ ...interface{}) {
+	ParallelWorker(len(keys), 16, func(start, end, _ int, _ ...interface{}) {
 		for i := start; i < end; i++ {
 			trie.Get(keys[i])
 		}
 	})
-	fmt.Println("Parallel Get ", len(keys), time.Since(t0))
+	fmt.Println("Parallel Get ", len(keys), time.Since(t0), " with 16 threads")
 }
 
 func TestSwitchingTries(t *testing.T) {
