@@ -1,5 +1,4 @@
-package hashdb
-package pathdb
+package exp
 
 type Config struct {
 	StateHistory   uint64 // Number of recent blocks to maintain state history for

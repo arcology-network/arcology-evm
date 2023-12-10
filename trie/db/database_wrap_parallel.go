@@ -1,7 +1,7 @@
 package hashdb
 
 import (
-	parahashdb "github.com/arcology-network/concurrent-evm/trie/exp"
+	parahashdb "github.com/ethereum/go-ethereum/trie/exp"
 )
 
 // "github.com/ethereum/go-ethereum/ethdb"
