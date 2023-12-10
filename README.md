@@ -1,4 +1,3 @@
-<div style="background-color: #FAFAFA  ; padding: 10px;">
 
 ## Overview:
 
@@ -20,7 +19,6 @@ New extension interfaces have been designed to integrate with Arcology's concurr
 
 For a detailed list of changes and implementation specifics, please refer to [our documentation here.](https://doc.arcology.network/)
 
-</div>
 
 ## Go Ethereum
 
