@@ -1,24 +1,20 @@
 
-## Overview:
+## Overview
 
-Concurrent-Ethereum is a fork of go-ethereum, designed to introduce parallel concurrency capabilities to the Arcology blockchain. This project enhances the processing efficiency by allowing 
-parallel execution of multiple transactions. 
+Concurrent-Ethereum is designed to introduce parallel concurrency capabilities to the Arcology blockchain. This project enhances the processing efficiency by allowing parallel execution of multiple transactions. The original Ethereum interfaces and functions remain pretty much unchanged. concurrent-evm behaves **identically to the standard go-ethereum** when used alone. 
 
-The original Ethereum interfaces and functions remain pretty much unchanged. concurrent-evm behaves **identically to the standard go-ethereum** when used alone. 
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=San+Francisco&weight=600&size=14&duration=2000&pause=4000&color=030A0D&background=F6F6F6&multiline=true&random=false&width=732&height=30&lines=Full+integration+with+other+Arcology+modules+is+required+to+unlock+parallel+processing.)](https://git.io/typing-svg)
+
+### Key Modifications
 New extension interfaces have been designed to integrate with Arcology's concurrency framework, providing hooks for parallel processing.
-
->> **Full integration** with other Arcology modules is required to activate parallel processing.
-
-### Key Modifications:
 
 * **EVM:** Added code to redirect calls to special addresses managed by Arcology's concurrency control system.
 
 * **Trie**: Extra interfaces are added to enable parallel updates and retrievals.
 
-## Documentation:
+## Documentation
 
 For a detailed list of changes and implementation specifics, please refer to [our documentation here.](https://doc.arcology.network/)
-
 
 ## Go Ethereum
 
