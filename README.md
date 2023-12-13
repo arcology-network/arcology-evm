@@ -1,7 +1,7 @@
 
 ## Overview
 
-Concurrent-Ethereum is designed to introduce parallel concurrency capabilities to the Arcology blockchain. This project enhances the processing efficiency by allowing parallel execution of multiple transactions. The original Ethereum interfaces and functions remain pretty much unchanged. concurrent-evm behaves **identically to the standard go-ethereum** when used alone. 
+Concurrent-Ethereum is designed to introduce parallel concurrency capabilities to the [Arcology blockchain](https://arcology.network). This project enhances the processing efficiency by allowing parallel execution of multiple transactions. The original Ethereum interfaces and functions remain pretty much unchanged. concurrent-evm behaves **identically to the standard go-ethereum** when used alone. 
 
 ![Typing SVG](https://readme-typing-svg.demolab.com?font=San+Francisco&weight=600&size=14&duration=3000&pause=4000&color=030A0D&background=F6F6F6&multiline=true&random=false&width=720&height=30&lines=Full+integration+with+other+Arcology+modules+is+required+to+unlock+parallel+processing.)
 
