@@ -12,12 +12,11 @@ New extension interfaces have been designed to integrate with Arcology's concurr
 
 * **Trie**: Extra interfaces are added to enable parallel updates and retrievals.
 
-## Integration
-For details regarding integration with Arcology, please refer to our [design documents.](https://doc.arcology.network/arcology-concurrency-control/evm-integration)
+>>For details regarding integration with Arcology, please refer to our [design documents.](https://doc.arcology.network/arcology-concurrency-control/evm-integration)
 
 ## Documentation
 
-For a detailed list of changes and implementation specifics, please refer to [our documentation here.](https://doc.arcology.network/)
+For a list of changes and implementation specifics, please refer to [our documentation here.](https://doc.arcology.network/)
 
 ## Go Ethereum
 
