@@ -23,9 +23,11 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/golang-jwt/jwt/v4"
@@ -90,6 +92,19 @@ func (at *authTest) Run(t *testing.T) {
 	if x != "hello eth" {
 		t.Fatalf("method was silent but did not return expected value: %q", x)
 	}
+}
+
+func TestJwt(t *testing.T) {
+	jwtsecret := common.FromHex(strings.TrimSpace("08440e2222e6a49cefa54379ff86d075e992c0b96ae04c77f03b766983754f6b"))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iat": &jwt.NumericDate{Time: time.Now()},
+	})
+	s, err := token.SignedString(jwtsecret[:])
+	if err != nil {
+		fmt.Printf("failed to create JWT token: %s", err)
+		return
+	}
+	fmt.Printf("Authorization:%v\n", "Bearer "+s)
 }
 
 func TestAuthEndpoints(t *testing.T) {
