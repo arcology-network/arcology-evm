@@ -144,10 +144,20 @@ func new(diskdb ethdb.Database, config *Config, resolver ChildResolver) *databas
 	if config.CleanCacheSize > 0 {
 		cleans = fastcache.New(config.CleanCacheSize)
 	}
+	// return &database{
+	// 	diskdb:   diskdb,
+	// 	resolver: resolver,
+	// 	cleans:   cleans,
+	// 	dirties:  make(map[common.Hash]*cachedNode),
+	// }
+	return newWithSharedCache(diskdb, config, resolver, cleans)
+}
+
+func newWithSharedCache(diskdb ethdb.Database, config *Config, resolver ChildResolver, cleanCache *fastcache.Cache) *database {
 	return &database{
 		diskdb:   diskdb,
 		resolver: resolver,
-		cleans:   cleans,
+		cleans:   cleanCache,
 		dirties:  make(map[common.Hash]*cachedNode),
 	}
 }

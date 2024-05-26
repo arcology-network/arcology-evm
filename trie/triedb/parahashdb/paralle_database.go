@@ -3,6 +3,7 @@ package hashdb
 import (
 	"errors"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -17,9 +18,7 @@ type Database struct {
 }
 
 // diskdbs, db.cleans, mptResolver{}
-func New(diskdb interface{}, _ interface{}, resolver ChildResolver) *Database {
-	config := &Config{CleanCacheSize: 1024 * 1024 * 10}
-
+func New(diskdb interface{}, _ interface{}, resolver ChildResolver, config *Config) *Database {
 	db := &Database{}
 	if ddb, ok := diskdb.(ethdb.Database); ok {
 		for i := 0; i < len(db.dbs); i++ {
@@ -34,6 +33,25 @@ func New(diskdb interface{}, _ interface{}, resolver ChildResolver) *Database {
 		}
 		return db
 	}
+	return nil
+}
+
+func NewWithCache(diskdb interface{}, _ interface{}, resolver ChildResolver, sharedCleanCache *fastcache.Cache, config *Config) *Database {
+	db := &Database{}
+	if ddb, ok := diskdb.(ethdb.Database); ok {
+		for i := 0; i < len(db.dbs); i++ {
+			db.dbs[i] = newWithSharedCache(ddb, config, resolver, sharedCleanCache) // rawdb.NewMemoryDatabase()
+		}
+		return db
+	}
+
+	if hdbs, ok := diskdb.([16]ethdb.Database); ok {
+		for i := 0; i < len(hdbs); i++ {
+			db.dbs[i] = newWithSharedCache(hdbs[i], config, resolver, sharedCleanCache) // rawdb.NewMemoryDatabase()
+		}
+		return db
+	}
+
 	return nil
 }
 

@@ -116,9 +116,11 @@ func (trie *Trie) initSubRoots(keys [][]byte, values [][]byte) bool {
 	return ok
 }
 
-func (trie *Trie) ParallelUpdate(keys [][]byte, values [][]byte) {
+func (trie *Trie) ParallelUpdate(keys [][]byte, values [][]byte) []error {
+	errs := make([]error, 16)
+
 	if len(keys) == 0 || len(values) == 0 {
-		return
+		return errs
 	}
 
 	// Initialize snapshots
@@ -131,7 +133,7 @@ func (trie *Trie) ParallelUpdate(keys [][]byte, values [][]byte) {
 		for i := 0; i < len(keys); i++ {
 			trie.update(keys[i], values[i])
 		}
-		return
+		return errs
 	}
 
 	for i := 0; i < 16; i++ {
@@ -152,7 +154,11 @@ func (trie *Trie) ParallelUpdate(keys [][]byte, values [][]byte) {
 				if rootSnapshots[nibble] == nil {
 					rootSnapshots[nibble] = trie.root
 				}
-				rootSnapshots[nibble], _ = trie.threadSafeUpdate(rootSnapshots[nibble], keys[i], values[i])
+
+				var err error
+				if rootSnapshots[nibble], err = trie.threadSafeUpdate(rootSnapshots[nibble], keys[i], values[i]); err != nil {
+					errs[nibble] = err
+				}
 			}
 		}
 	}
@@ -162,6 +168,7 @@ func (trie *Trie) ParallelUpdate(keys [][]byte, values [][]byte) {
 	for i := 0; i < 16; i++ {
 		trie.root.(*fullNode).Children[i] = rootSnapshots[i].(*fullNode).Children[i]
 	}
+	return errs
 }
 
 func (trie *Trie) ParallelGet(keys [][]byte) ([][]byte, error) {

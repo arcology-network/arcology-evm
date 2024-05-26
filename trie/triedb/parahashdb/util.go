@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+// The ParallelWorker function is a utility function that helps in parallelizing work across multiple threads or goroutines
+
 func ParallelWorker(total, nThds int, worker func(start, end, idx int, args ...interface{}), args ...interface{}) {
 	ranges := make([]int, 0, nThds+1)
 	step := int(math.Ceil(float64(total) / float64(nThds)))

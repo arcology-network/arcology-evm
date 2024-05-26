@@ -377,14 +377,13 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 			return false, n, err
 		}
 
-		/*
-			The code below creates a fresh copy from a "clean" node ONCE. All the subsequent operations will be performed on that
-			single copy until the next root hash calculation. This cut the overall time by half.
+		/*   Arcology Network
+		The code below creates a fresh copy from a "clean" node ONCE. All the subsequent operations will be performed on that
+		single copy until the next root hash calculation. This cut the overall time by half.
 
-			This comes with the cost of losing ability to roll back to any state snapshot between two root hash
-			calcuations. This doesn't affect Arcology since it has other methods to keep track of state changes.
+		This comes with the cost of losing ability to roll back to any state snapshot between two root hash
+		calcuations. This doesn't affect Arcology since it has other methods to keep track of state changes.
 		*/
-
 		if !n.flags.dirty {
 			n = n.copy()
 		}
